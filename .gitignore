@@ -1,0 +1,39 @@
+# Ignore vendor dependencies and node_modules
+_vendor/
+_.git
+node_modules/
+vendor/
+old_vendor/
+oldvendor/
+#public/vendor/
+# Ignore local configuration files
+.env
+.htaccess
+app.zip
+# Ignore generated files and lock files
+composer.lock
+package-lock.json
+webpack.mix.js
+
+# Ignore IDE/Editor settings (e.g., for PhpStorm or VSCode)
+.idea/
+.vscode/
+
+# Ignore server-specific files
+holly_day_fair.sql
+
+# Ignore testing files
+test.txt
+phpunit.xml
+
+# Ignore temporary and system-specific files
+.DS_Store
+Thumbs.db
+*.log
+
+# Ignore compiled assets (if applicable)
+#public/js/
+#public/css/
+
+27102021.zip
+holly_day_fair.sql

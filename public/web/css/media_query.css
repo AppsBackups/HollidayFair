@@ -1,0 +1,27 @@
+@charset "utf-8";
+
+/* CSS Document */
+
+@media(min-width:320px) and (max-width:480px) {
+	.padding_786 {
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+	}
+	
+	.logo > a > img {
+		width: 164px;
+	}	
+}
+
+@media(min-width:480px) and (max-width:767px) {
+}
+
+@media(min-width:768px) and (max-width:1023px) {
+	
+	.logo > a > img {
+		width: 164px;
+	}	
+}
+
+@media(min-width:1024px) and (max-width:1170px) {
+}

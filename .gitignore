@@ -17,7 +17,7 @@ webpack.mix.js
 # Ignore IDE/Editor settings (e.g., for PhpStorm or VSCode)
 .idea/
 .vscode/
-
+.gitignore
 # Ignore server-specific files
 holly_day_fair.sql
 

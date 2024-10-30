@@ -7,7 +7,6 @@ old_vendor/
 oldvendor/
 #public/vendor/
 # Ignore local configuration files
-.env
 .htaccess
 app.zip
 # Ignore generated files and lock files

@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
 use Intervention\Image\Facades\Image;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
 
 class BaseController extends Controller
 {
@@ -220,48 +222,55 @@ class BaseController extends Controller
         return $html;
     }
 
-    public function sendNotification($token, $title, $data, $type)
-    {
+    public function sendNotification(array $tokens, string $title, array $data, string $type)
+{
+    $chunks = array_chunk($tokens, 500); // Firebase allows a maximum of 500 tokens per request
+    $responseReports = [];
 
-        if ($type == 'android') {
-            $res = fcm()
-                ->to(["cytJPQaUQTyDvjjlQHXdDm:APA91bHMQSxrzgjvLlPgVLITHu7OlfmM2gSsE77qOgZNpW8pbJpUrqjnBThJvhn1UhDZkHfrgbSCMNu7juapvolS_s85nIN5U2Q9Y_YKExNUrErYoofT2SO36ZcnMRrSmJkypLLr9wsi","eApWSdq7Q7mENx2bEQPL62:APA91bEbJ7HYv7n0N8BVERCAE8uLrt2Z8k9rNYLX0b1Hj7VMJj-lcLeC7SOaCiePZHZU_VXyLE9r3RunTagzLfCTtAs4ss8jte-Zxhr2xSvCbjRJUI15eomJtNGC5dfed_deBMMtETIo"]) // $token must an array
-                ->priority('high')
-                ->data([
+ 
+    info(json_encode($tokens));
+    info(json_encode($chunks));
+     
+    foreach ($chunks as $chunk) {
+        try {
+            $message = [
+                'notification' => [
                     'title' => $title,
-                    'body' => $data,
-                    'status' => '1',
-                    'sound' => 'default',
-                ])
-                ->send();
+                    'body' => $data['message'],
+                ],
+                'data' => $data,
+                'android' => [
+                    'priority' => 'high',
+                ],
+                'apns' => [
+                    'headers' => [
+                        'apns-priority' => '10',
+                    ],
+                    'payload' => [
+                        'aps' => [
+                            'alert' => [
+                                'title' => $title,
+                                'body' => $data['message'],
+                            ],
+                            'sound' => 'default',
+                        ],
+                    ],
+                ],
+            ];
 
-        } else {
-            $res = fcm()
-                ->to($token) // $token must an array
-                ->priority('high')
-                ->data([
-                    'title' => $title,
-                    'body' => $data,
-                    'status' => '1',
-                    'sound' => 'default',
-                    'alert' => [
-                    'sound' => 'default'
-                ]
-            ])->notification([
-                'title' => $title,
-                'body' => $data['message'],
-                'status' => '1',
-                'mutable_content' => true,
-                'badge' => '1',
-                'sound' => 'default'
-            ])
-            ->send();
+
+            // Send notification using Firebase messaging service
+            $response = app('firebase.messaging')->sendMulticast($tokens, $message);
+            \Log::info("Notification sentt successfully", ['success_count' => $response->successes()->count()]);
+            $responseReports[] = ['report' => $response->successes()->count()];
+
+        } catch (\Exception $e) {
+            \Log::error("Notification Error: " . $e->getMessage());
+            $responseReports[] = ['error' => $e->getMessage()];
         }
-        \Log::info([$res]);
-        return $res;
-
     }
 
-
+    return $responseReports;
+}
 
 }

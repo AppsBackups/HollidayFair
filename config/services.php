@@ -34,4 +34,7 @@ return [
         'secret' => env('SPARKPOST_SECRET'),
     ],
 
+    'firebase' => [
+    'credentials' => config('firebase.credentials_file'), 
+],
 ];

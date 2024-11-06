@@ -9,6 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
+use Kreait\Firebase\Messaging\MulticastSendReport;
+
 
 class AnnouncementController extends BaseController
 {
@@ -51,77 +55,93 @@ class AnnouncementController extends BaseController
      * Show the form for creating a new resource.
      *
      * @return \Illuminate\Http\Response
-     */
-    public function create(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'message_title' => 'required',
-            'date_time' => 'required',
-            'message_description' => 'required',
-        ]);
+  */
 
-        if ($validator->fails()) {
-            $errors = collect($validator->errors());
-            $error = $errors->unique()->first();
-            return $this->respondWithError($error[0], '200');
-        }
-        $input = $request->all();
+public function create(Request $request)
+{
+    // Validate the request inputs
+    $validator = Validator::make($request->all(), [
+        'message_title' => 'required',
+        'date_time' => 'required',
+        'message_description' => 'required',
+    ]);
 
-        $date = strtotime($request->date_time);
-        $html=date('y-m-d h:i:s', $date);
-        $input['date_time']=$html;
-        $input['user_id']=0;
-        $announcement = Announcement::create($input);
-        if($announcement)
-        {
-            $data['title'] = $input['message_title'];
-            $data['message'] = 'New Announcement';
-            $data['Notification_type'] = 'event';
-            $data['data'] = $input;
-            $data['sound'] = 'default';
+    if ($validator->fails()) {
+        $errors = collect($validator->errors());
+        $error = $errors->unique()->first();
+        return $this->respondWithError($error[0], '200');
+    }
 
-            $total_rows = Device::count();
-            $no_of_records_per_page = 800;
-            $total_pages = ceil($total_rows / $no_of_records_per_page);
+    // Format the date and prepare announcement data
+    $input = $request->all();
+    $input['date_time'] = date('y-m-d h:i:s', strtotime($request->date_time));
+    $input['user_id'] = 0;
 
-            $currentPage = 1;
-            while ($currentPage <= $total_pages) {
-                $ios_token=[];
-                $android_token=[];
+    $announcement = Announcement::create($input);
 
-                Paginator::currentPageResolver(function () use ($currentPage) {
-                    return $currentPage;
-                });
+    if ($announcement) {
+        // Prepare notification data
+        $data = [
+            'title' => $input['message_title'],
+            'message' => 'New Announcement',
+            'Notification_type' => 'event',
+            'data' => $input,
+            'sound' => 'default',
+        ];
 
-                $db_collection = Device::paginate(800);
-                foreach ($db_collection as $collection)
-                {
-                    if($collection['device_type']=='android')
-                    {
-                        $android_token[]=$collection['device_token'];
-                        $android_type='android';
+         $this->sendNotification(["d8FXTUhMSy62ffUye1k6bT:APA91bGR8zZReQf7JnYYynYfaaxesKgjNG3QjULTbeD1dBGTOwixbURHd5aaN4X-Ddefef8YS4toDsaNuuFWfZK7GR8BUXcOjS3dGle0mKwTGYoEjdjmUFs"], $input['message_title'], $data, 'android');
+
+        // Set up pagination and Firebase's batch size limit
+        $total_rows = Device::count();
+        $no_of_records_per_page = 500; // Firebase allows up to 500 tokens per multicast message
+        $total_pages = ceil($total_rows / $no_of_records_per_page);
+
+        $currentPage = 1;
+
+        while ($currentPage <= $total_pages) {
+            $ios_tokens = [];
+            $android_tokens = [];
+
+            Paginator::currentPageResolver(function () use ($currentPage) {
+                return $currentPage;
+          });
+
+            // Fetch the device tokens for the current page
+            $devices = Device::paginate($no_of_records_per_page);
+            foreach ($devices as $device) {
+                if (!empty($device['device_token'])) {
+                    if ($device['device_type'] === 'android') {
+                        $android_tokens[] = $device['device_token'];
+                    } elseif ($device['device_type'] === 'ios') {
+                        $ios_tokens[] = $device['device_token'];
                     }
-                    else{
-                        $ios_token[]=$collection['device_token'];
-                        $ios_type='ios';
-                    }
-                }
-                $currentPage++;
-
-                if($android_token) {
-                    $this->sendNotification($android_token, $input['message_title'], $data,'android');
-                }
-                if($ios_token) {
-                    $this->sendNotification($ios_token,$input['message_title'],$data,'ios');
                 }
             }
 
+            $currentPage++;
 
+            // Send notifications if there are valid tokens
+            if (count($android_tokens) > 0) {
+            //    \Log::info("Sending Android notification to " . count($android_tokens) . " devices.");
+  //            //  $this->sendNotification($android_tokens, $input['message_title'], $data, 'android');
+            } else {
+             //   \Log::error("No Android tokens available for notification on page $currentPage.");
+            }
 
-            return $this->respondSuccess('Message Send Successfully.', 200);
+            if (count($ios_tokens) > 0) {
+              //  \Log::info("Sending iOS notification to " . count($ios_tokens) . " devices.");
+//              //  $this->sendNotification($ios_tokens, $input['message_title'], $data, 'ios');
+            } else {
+               // \Log::error("No iOS tokens available for notification on page $currentPage.");
+            }
         }
-        return $this->respondWithError('Something wrong.', '200');
+
+        return $this->respondSuccess('Message Sent Successfully.', 200);
     }
+
+    return $this->respondWithError('Something went wrong.', '200');
+}
+
 
     /**
      * Store a newly created resource in storage.

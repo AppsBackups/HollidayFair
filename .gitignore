@@ -8,7 +8,7 @@ oldvendor/
 .env
 #public/vendor/
 # Ignore local configuration files
-
+config/service-account.json
 app.zip
 # Ignore generated files and lock files
 composer.lock

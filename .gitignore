@@ -5,6 +5,7 @@ node_modules/
 vendor/
 old_vendor/
 oldvendor/
+.env
 #public/vendor/
 # Ignore local configuration files
 
